@@ -1,0 +1,337 @@
+# FOR SAISWAROOP 
+rm(list=ls())
+library(ggrepel)
+library(gridExtra)
+library(data.table)
+library(tibble)
+library(ggplot2)
+library(dplyr)
+library(rtracklayer)
+library(tidyr)
+library(reshape2)
+library(ggpubr)
+
+genes <- c("DHODH")
+load("PRAD_RNAseqv2_ALL_Symbol.rda")
+all_data<-mydata
+all_data<-log2(all_data+1)
+y<-all_data[str_detect(colnames(all_data), "01A|02A|03A|04A|05A|06A|07A|08A|09A
+              |01B|02B|03B|04B|05B|06B|07B|08B|09B
+              |01C|02C|03C|04C|05C|06C|07C|08C|09C
+              |01D|02D|03D|04D|05D|06D|07D|08D|09D")]
+dim(y)
+z<-all_data[str_detect(names(all_data), "11A")]
+dim(z)
+TuNo<-merge(y, z, by = "row.names", all.x = FALSE,all.y = FALSE)
+row.names(TuNo)<-TuNo$Row.names
+TuNo$Row.names<-NULL
+
+TN<-TuNo[genes,]
+TN<-as.data.frame(t(TN))
+labels <- data.frame(
+  sample_id = c(names(y), names(z)),
+  condition = c(rep("Tumor", length(names(y))), rep("Normal", length(names(z)))))
+
+# Convert TuNo matrix to data frame
+TN$sample_id <- rownames(TN)
+TN_long <- merge(TN, labels, by = "sample_id")
+get_pvalue <- function(gene) {
+  data_gene <- subset(TN_long, Gene == gene)
+  p_val <- wilcox.test(DHODH ~ condition, data = data_gene)$p.value
+  return(data.frame(DHODH = gene, p_value = p_val))
+}
+
+p<-ggplot(TN_long , aes(x = condition, y = DHODH, fill = condition)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +
+  geom_jitter(width = 0.2, alpha = 0.5) +
+  facet_wrap(~ DHODH, scales = "free_y") +
+  stat_compare_means(method = "wilcox.test", label = "p") + # Adds Wilcoxon test p-value
+  labs(title = "DHODH Expression in PRAD Samples (Wilcoxon Test)",
+       x = "Tumor vs Normal healthy samples",
+       y = "Normalized gene expression (Log2(exp+1))") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Tumor" = "lightpink", "Normal" = "skyblue"))
+
+print(p)
+
+
+ggsave("PRAD1.png", plot = p, dpi = 1200, width = 10, height = 12)
+
+
+myinf3<-"PRAD_Clincial_info.txt"
+info= read.table(myinf3, sep = "\t", header = T, row.names = 1, quote = "")
+names(info)
+xx<-grep("race", names(info))
+se=c("vital_status", "days_to_death", "days_to_last_followup","gender", "ethnicity", "stage_event.gleason_grading.gleason_score","race_list.race")
+info=info[,se]
+table(info$stage_event.gleason_grading.gleason_score)
+
+names(info)
+TNlong1<-TN_long
+library(stringr)
+names(TNlong1)
+head(TNlong1)
+TNlong1$sample_id2 <- substr(TNlong1$sample_id, start = 1, stop = 12)
+
+TNlong1$gleason_grading <- ifelse(
+  TNlong1$sample_id2 %in% rownames(info), 
+  info$stage_event.gleason_grading.gleason_score[match(TNlong1$sample_id2, rownames(info))], 
+  NA
+)
+TNlong1$race <- ifelse(
+  TNlong1$sample_id2 %in% rownames(info), 
+  info$race_list.race[match(TNlong1$sample_id2, rownames(info))], 
+  NA
+)
+
+# Remove NA values in race column
+TN_long1_filtered <- TNlong1[!is.na(TNlong1$race), ]
+TN_long1_filtered <- TNlong1[!TNlong1$condition %in% "Tumor", ]
+TN_long1_filtered  <- TN_long1_filtered  %>%
+  mutate(race = recode(race,
+                       "black or african american" = "African American",
+                       "white" = "European American"))
+
+TN_long1_filtered <- TN_long1_filtered[!TN_long1_filtered$race %in% "asian", ]
+
+p_race <- ggplot(TN_long1_filtered, aes(x = race, y = DHODH, fill = race)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +
+  geom_jitter(width = 0.2, alpha = 0.5) +
+  stat_compare_means(method = "wilcox.test", label = "p", ref.group = "African American", label.x = 0.5) +  # Set reference group
+  labs(title = "Gene Expression in PRAD Samples by Race (Wilcoxon Test)",
+       x = "Race",
+       y = "Normalized Gene Expression (Log2(exp+1))",
+       fill = "Race") +  # Add a title for the legend
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 37, hjust = 1, color = "black"),
+    strip.text = element_text(size = 10, face = "bold"),  # Adjust facet label appearance
+    legend.position = "bottom",  # Move legend to the bottom
+    axis.line = element_line(color = "black", linewidth = 0.5)  # Add axis lines
+  ) +
+  scale_fill_manual(values = c("African American" = "darkred", 
+                               "European American" = "skyblue"))  # Ensure consistent color mapping
+
+p_race
+
+
+
+#@@@@@@@@@  Comparative Expression Analysis 
+#@@@@@@@@@@@@@@@@@@@@@@@@ Data-1 GSE70768
+clinical_file <- "Ross_GSE70768_Clinical_info.txt"
+expr_file <- "Ross_GSE70768_Symbol.txt"
+
+clinical_info <- read.delim(clinical_file, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+expr_data <- read.delim(expr_file, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+
+gene_Id <- "DHODH"
+# Subset DHODH expression row and transpose (samples as rows)
+expr_data1 <- expr_data[gene_Id, ]
+expr_data1<-t(expr_data1)
+expr_data1<-log2(expr_data1+1)
+# Samples common to both datasets
+common_samples <- intersect(rownames(clinical_info), rownames(expr_data1))
+
+# Subset clinical and expression data
+clinical_matched <- clinical_info[rownames(clinical_info) %in% common_samples, ]
+expr_matched <- expr_data1[common_samples, , drop = FALSE]
+
+# Combine into one dataframe
+merged_data <- data.frame(
+  Title = clinical_matched$Title,
+  sample.type = clinical_matched$sample.type,
+  tumour.gleason = clinical_matched$tumour.gleason,
+  tumour.percentage = clinical_matched$tumour.percentage,
+  DHODH = expr_matched[, gene_Id]
+)
+merged_data$sample.type <- trimws(merged_data$sample.type)
+merged_data$sample.type <- ifelse(merged_data$sample.type == "Benign", "Normal", merged_data$sample.type)
+merged_data$tumour.percentage <- as.numeric(gsub("%", "", merged_data$tumour.percentage))
+
+
+# Calculate group stats for median, min, max
+stats <- merged_data %>%
+  group_by(sample.type) %>%
+  summarise(
+    median_val = median(DHODH, na.rm = TRUE),
+    min_val = min(DHODH, na.rm = TRUE),
+    max_val = max(DHODH, na.rm = TRUE)
+  ) %>%
+  mutate(x = as.numeric(factor(sample.type)))
+
+plot_1<-ggplot(merged_data, aes(x = sample.type, y = DHODH, color = sample.type)) +
+  geom_jitter(width = 0.2, size = 1) +
+  # Horizontal lines for median, min, max
+  geom_segment(data = stats, aes(x = x - 0.3, xend = x + 0.3, y = median_val, yend = median_val), color = "black", size = 1) +
+  geom_segment(data = stats, aes(x = x - 0.1, xend = x + 0.1, y = min_val, yend = min_val),color = "black") +
+  geom_segment(data = stats, aes(x = x - 0.1, xend = x + 0.1, y = max_val, yend = max_val), color = "black") +
+  # Vertical black line connecting min, median, max
+  geom_segment(data = stats, aes(x = x, xend = x, y = min_val, yend = max_val), color = "black", size = 0.8) +
+  geom_segment(data = stats, aes(x = x, xend = x, y = median_val, yend = median_val), color = "black", size = 1.5) +  # highlight median point with thicker line
+  theme_classic() +
+  theme(axis.text.x = element_text( color= "black" ,face = "bold", size = 15),
+        axis.text.y = element_text( color= "black", face = "bold", size = 15),legend.position = "none",
+        plot.title = element_text(hjust = 0.5),
+        axis.title.y = element_text(color = "black", size = 15, face = "bold")) +
+  labs(title = "GSE70768", x = NULL, y = "DHODH Expression \n(log-normalized)") +
+  stat_compare_means(method = "wilcox.test", label = "p.format", label.x = 1.25, label.y = 3+0.03)+
+  scale_color_manual(values = c("Normal" = "blue", "Tumour" = "red"))
+
+
+plot_1
+
+tiff("data_5_GSE70768_1.tiff",
+     width = 3.5, height = 5, units = "in", res = 1200)
+print(plot_1)
+dev.off()
+
+
+# Tumor percentage
+merged_data$tumour.percentage <- as.numeric(gsub("%", "", merged_data$tumour.percentage))
+# Drop rows with missing values
+plot_data <- merged_data %>%
+  filter(!is.na(tumour.percentage) & !is.na(DHODH))
+
+# Scatter plot with regression line and Pearson correlation
+plot_2 <- ggplot(plot_data, aes(x = tumour.percentage, y = DHODH)) +
+  geom_point(color = "#00688B", size = 2) +
+  geom_smooth(method = "lm", color = "black", se = TRUE) +
+  stat_cor(
+    method = "pearson",
+    label.x = 10,
+    label.y = max(plot_data$DHODH, na.rm = TRUE),
+    size = 6  # increase size here
+  ) +
+  theme_minimal() +
+  labs(
+    title = "Tumor Percentage (GSE70768)",
+    x = "Tumor Percentage (%)",
+    y = "DHODH Expression \n(log-normalized)"
+  ) +
+  theme(
+    plot.title.position = "plot",
+    plot.title = element_text(hjust = 0.5, size = 15, face = "bold"),
+    axis.text.x = element_text(color = "black", size = 15, face = "bold"),
+    axis.text.y = element_text(color = "black", size = 15, face = "bold"),
+    axis.title.y = element_text(color = "black", size = 15, face = "bold"),
+    axis.title.x = element_text(color = "black", size = 15, face = "bold")
+  )
+
+plot_2
+
+tiff("Fig_1B_3_GSE70768.tiff",
+     width = 5, height =4, units = "in", res = 1200)
+print(plot_2)
+dev.off()
+
+
+#@@@@@@@@@@@@@@@@@@@@@@@@ Data-2 GSE17951
+clinical_file <- "Wang_GSE17951/Clinical_info.txt"
+expr_file <- "Wang_GSE17951/Wang_GSE17951_prostate_expr_Symbol.txt"
+
+clinical_info <- read.delim(clinical_file, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+expr_data <- read.delim(expr_file, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+
+dhodh_expr <- data.frame(
+  patient.id = colnames(expr_data),
+  DHODH = as.numeric(expr_data["DHODH", ])
+)
+
+names(clinical_info) <- c("patient.id", "Title", "type", "tumor.percentage")
+merged_data <- clinical_info %>%
+  inner_join(dhodh_expr, by = "patient.id")
+
+merged_data <- merged_data[!(merged_data$type %in% c("Biopsy", "Ctrl")), ]
+merged_data$DHODH <- log2(merged_data$DHODH + 1)
+
+p3 <- ggplot(merged_data, aes(x = tumor.percentage, y = DHODH)) +
+  geom_point(color = "#00688B") +
+  geom_smooth(method = "lm", se = TRUE, color = "black") +
+  stat_cor(
+    method = "pearson",
+    aes(label = paste(..r.label.., ..p.label.., sep = "~`,`~")),
+    label.x.npc = "left",
+    label.y = max(merged_data$DHODH),
+    size = 6
+  ) +
+  labs(
+    title = "Tumor Percentage (GSE17951)",
+    x = "Tumor Percentage (%)",
+    y = "DHODH Expression \n(log-normalized)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title.position = "plot",
+    plot.title = element_text(hjust = 0.5, size = 15, face = "bold"),
+    axis.text.x = element_text(color = "black", size = 15, face = "bold"),
+    axis.text.y = element_text(color = "black", size = 15, face = "bold"),
+    axis.title.y = element_text(color = "black", size = 15, face = "bold"),
+    axis.title.x = element_text(color = "black", size = 15, face = "bold")
+  )
+
+# Show plot
+print(p3)
+
+tiff("Fig_1B_1_GSE17951.tiff",
+     width = 5, height =4, units = "in", res = 1200)
+print(p3)
+dev.off()
+
+
+#@@@@@@@@@@@@@@@@@@@@@@@@ Data-3 GSE8218
+# --- Step 1: Load data ---
+clinical_file <- "Wang_GSE8218/Clinical_info.txt"
+expr_file <- "Wang_GSE8218/Wang_GSE8218_prostate_expr_Symbol.txt"
+
+clinical_info <- read.delim(clinical_file, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+expr_data <- read.delim(expr_file, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+
+# --- Step 2: Extract DHODH expression and relevant clinical percentages ---
+dhodh_expr <- as.numeric(expr_data["DHODH", ])
+sample_ids <- colnames(expr_data)
+sample_map <- match(sample_ids, clinical_info$Title)
+
+combined_df <- data.frame(
+  Sample = sample_ids,
+  DHODH_Expression = dhodh_expr,
+  Stroma = as.numeric(sub("%", "", clinical_info$Stroma.percentage[sample_map])),
+  Tumor = as.numeric(sub("%", "", clinical_info$Tumor.percentage[sample_map])),
+  BPH = as.numeric(sub("%", "", clinical_info$BPH.percentage[sample_map])),
+  Atrophic = as.numeric(sub("%", "", clinical_info$Atrophic.Gland.percentage[sample_map]))
+)
+combined_df <- na.omit(combined_df)
+
+# --- Step 3: Plot DHODH expression vs Tumor percentage ---
+p2 <- ggplot(combined_df, aes(x = Tumor, y = DHODH_Expression)) +
+  geom_point(color = "#00688B") +
+  geom_smooth(method = "lm", se = TRUE, color = "black") +
+  stat_cor(
+    method = "pearson",
+    aes(label = paste("bold(", ..r.label.., ")~`,`~bold(", ..p.label.., ")")),
+    label.x.npc = "left",
+    label.y = max(combined_df$DHODH_Expression),
+    size = 6
+  ) +
+  labs(
+    title = "Tumor Percentage (GSE8218)",
+    x = "Tumor Percentage (%)",
+    y = "DHODH Expression \n(log-normalized)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title.position = "plot",
+    plot.title = element_text(hjust = 0.5, size = 15, face = "bold"),
+    axis.text.x = element_text(color = "black", size = 15, face = "bold"),
+    axis.text.y = element_text(color = "black", size = 15, face = "bold"),
+    axis.title.y = element_text(color = "black", size = 15, face = "bold"),
+    axis.title.x = element_text(color = "black", size = 15, face = "bold")
+  )
+
+
+p2
+
+tiff("Fig_1B_2_GSE8218.tiff",
+     width = 5, height =4, units = "in", res = 1200)
+print(p2)
+dev.off()
+
