@@ -169,72 +169,40 @@ seurat_obj@meta.data <- seurat_obj@meta.data %>%
     seurat_clusters == "24" ~ "Pericytes",
     TRUE ~ "Unknown"
   ))
-p1<-DimPlot(seurat_obj, reduction = "umap", group.by = "Cell_type2", label = T)+NoLegend()
-
-p2<-DimPlot(seurat_obj, reduction = "umap", group.by = "Cell_type1", label = T)
+plot1<-DimPlot(seurat_obj, reduction = "umap", label = T)
+plot2<-DimPlot(seurat_obj, reduction = "umap", group.by = "Cell_type2", label = T)+NoLegend()
+plot3<-DimPlot(seurat_obj, reduction = "umap", group.by = "Cell_type1", label = T)
 
 
 #code storage
-function{
-  markers <- list(
-    "Mast cells" = c("TPSAB1", "CPA3", "HPGDS", "RGS13", "IL1RL1", "KIT", "GATA2", "FOSB", "RP11-354E11.2", "VWA5A", "SLC18A2", "HDC", "CAPG"),
-    "Endothelial cells" = c("RAMP2", "TM4SF1", "RNASE1", "EGFL7", "RAMP3", "PLVAP", "AQP1", "ECSCR", "FKBP1A", "AC011526.1", "EMP1", "DARC", "VWF", "EMCN"),
-    "Pericytes" = c("RGS5", "ACTA2", "MYH11", "MT1M", "FRZB", "MT1A", "NDUFA4L2", "PPP1R14A", "MYLK", "PHLDA1"),
-    "Fibroblasts" = c("DCN", "LUM", "PTN", "IGF1", "APOD", "COL1A2", "FBLN1", "MEG3", "CXCL12"),
-    "PDC" = c("IRF7", "IRF4", "LILRA4", "PPP1R14B", "SOX4", "TSPAN13", "KIAA0226", "PTCRA", "RAB11FIP1", "CXCR3", "IL3RA"),
-    "B cells" = c("MS4A1", "CD79B", "BTG1", "VPREB3", "BANK1", "CD79A", "IGLL5"),
-    "Plasma cells" = c("SEC11C", "XBP1", "PRDX4", "SPCS2", "SSR3", "SDF2L1", "C19orf10", "MANF", "TMEM258", "DNAJB9"),
-    "Macrophage" = c("C1QA", "C1QC", "C1QB", "GPR34", "CSF1R", "MS4A4A"),
-    "Monocytes" = c("S100A9", "FCN1", "S100A8", "CSTA", "EREG", "NEAT1", "TKT", "THBS1", "VCAN", "TSPO", "LYZ"),
-    "Neu"=c("FCGR3B", "CSF3R", "S100A12", "S100A8"),
-    "mDC" = c("CD1C", "PKIB", "INSIG1", "CLEC10A", "C15orf48", "PPA1"),
-    "NK" = c("NKG7", "GNLY", "KLRD1", "KLRB1", "FGFBP2", "PRF1"),
-    "CTL" = c("CD8A", "CD8B", "GZMH", "GZMA", "PTPRC"),
-    "Naive Th" = c("CCR7", "SELL"),
-    "Th1" = c("CD4", "IL2", "TNF"),
-    "Treg" = c("TIGIT", "CTLA4", "SOD1", "TNFRSF4", "TNFRSF18", "RTKN2", "FOXP3"),
-    "Epithelial Club" = c("SCGB1A3", "WFDC2", "LCN2", "MMP7", "KRT4", "TACSTD2", "SCGB3A1"),
-    "Epithelial Hillock" = c("KRT13", "S100A16", "S100A14", "KRT19"),
-    "Epithelial Basal" = c("TP63", "KRT14", "KRT5"),
-    "Epithelial Luminal" = c("KLK4", "KLK3", "KLK2", "ACPP", "AR"),
-    "Tumor" = c("AMACR", "CACNA1D", "PCA3", "ERG", "FABP5", "COL9A2", "GCNT1", "PHGR1"),
-    "Th17" = c("IL17A", "IL17F", "RORC", "CD4", "CCL20", "CCR6", "RORA"),
-    "CD8+ effector" = c("CD8A", "CD8B", "IFNG", "GZMK"),
-    "CD56bright NK" = c("KLRC1", "CD44", "COTL1", "XCL1", "XCL2", "TBX21", "EOMES"),
-    "CD56dim NK" = c("GZMB", "FGFBP2", "PRF1", "FCGR3A", "TBX21"),
-    "NKT" = c("CD44", "CD8A", "CD3D", "NKG7")
-  )
+markers <- list(
+  "B_cells" = c("MS4A1", "CD79B", "VPREB3", "CD79A"),
+  "CD4" = c("CD4", "IL2"),
+  "CD8" = c("CD8A", "CD8B", "IFNG", "GZMK"),
+  "mDC" = c("PKIB", "INSIG1", "CLEC10A", "C15orf48", "PPA1"),
+  "Endothelial" = c("RAMP2","EGFL7", "RAMP3", "PLVAP","EMCN"),
+  "Tumor" = c("AMACR", "CACNA1D", "GCNT1", "PHGR1"),
+  "Fibroblasts" = c("LUM", "PTN","APOD", "COL1A2", "FBLN1"),
+  "Macrophage" = c("C1QA", "C1QC", "C1QB", "GPR34", "CSF1R", "MS4A4A"),
+  "Mast" = c("TPSAB1", "CPA3", "RGS13", "VWA5A"),
+  "Monocytes" = c("FCN1", "S100A8", "CSTA", "EREG"),
+  "Pericytes" = c("RGS5", "ACTA2", "PPP1R14A", "MYLK"),
+  "Plasma" = c("SDC1", "XBP1", "PRDX4", "TMEM258"),
+  "NK" = c("NKG7", "GNLY", "KLRD1", "KLRB1"),
+  "Treg" = c("CTLA4", "TNFRSF4", "TNFRSF18", "RTKN2", "FOXP3")
+)
   
+markers_df <- stack(markers)
+colnames(markers_df) <- c("Symbol", "CellType")
+valid_markers_df <- markers_df[markers_df$Symbol %in% rownames(seurat_obj@assays$RNA$counts), ]
+valid_markers_df <- valid_markers_df[order(valid_markers_df$CellType), ]
+celltype_labels <- unique(valid_markers_df$CellType) 
+gene_list <- split(valid_markers_df$Symbol, valid_markers_df$CellType) 
+valid_markers <- unlist(gene_list)  
+names(valid_markers) <- rep(celltype_labels, times = lengths(gene_list))  
+valid_markers <- valid_markers[!duplicated(valid_markers)]
   
-  library(viridis)
-  all_markers <- unique(unlist(markers))
-  valid_markers <- all_markers[all_markers %in% rownames(seurat_obj@assays$RNA$counts)]
-  plot2<-DotPlot(seurat_obj, features =valid_markers,
-                 assay = "RNA", dot.scale = 1, 
-                 cluster.idents = FALSE) +
-    scale_size(range = c(0, 5)) +
-    scale_size_area(max_size = 10) +
-    cowplot::theme_cowplot() +
-    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-          legend.text = element_text(size = 8),
-          legend.title = element_text(size = 9)) +
-    scale_color_gradientn(colours = c("moccasin", "orange", "orangered"), limits = c(0, 1), 
-                          oob = scales::squish, name = 'log2 (count + 1)')
-  
-  
-  
-  #@@@@@@@  Plot-6.2 ADDing name on top on the plot.
-  markers_df <- stack(markers)
-  colnames(markers_df) <- c("Symbol", "CellType")
-  valid_markers_df <- markers_df[markers_df$Symbol %in% rownames(seurat_obj@assays$RNA$counts), ]
-  valid_markers_df <- valid_markers_df[order(valid_markers_df$CellType), ]
-  celltype_labels <- unique(valid_markers_df$CellType) 
-  gene_list <- split(valid_markers_df$Symbol, valid_markers_df$CellType) 
-  valid_markers <- unlist(gene_list)  
-  names(valid_markers) <- rep(celltype_labels, times = lengths(gene_list))  
-  valid_markers <- valid_markers[!duplicated(valid_markers)]
-  
-  plot2 <- DotPlot(seurat_obj, 
+plot4 <- DotPlot(seurat_obj, 
                    features = valid_markers, 
                    group.by = "Cell_type1",
                    assay = "RNA", 
@@ -251,96 +219,7 @@ function{
                           oob = scales::squish, 
                           name = 'log2 (count + 1)')
   
-  plot2}
-
-
-
-
-function{ grouped_celltype_markers <- list(
-  "Mast" = list(
-    "Mast cells" = c("TPSAB1", "CPA3", "HPGDS", "RGS13", "IL1RL1", "KIT", "GATA2", "FOSB", "RP11-354E11.2", "VWA5A", "SLC18A2", "HDC", "CAPG")
-  ),
-  "Endothelial" = list(
-    "Endothelial cells" = c("RAMP2", "TM4SF1", "RNASE1", "EGFL7", "RAMP3", "PLVAP", "AQP1", "ECSCR", "FKBP1A", "AC011526.1", "EMP1", "DARC", "VWF", "EMCN")
-  ),
-  "Mesenchymal" = list(
-    "Pericytes" = c("RGS5", "ACTA2", "MYH11", "MT1M", "FRZB", "MT1A", "NDUFA4L2", "PPP1R14A", "MYLK", "PHLDA1"),
-    "Fibroblasts" = c("DCN", "LUM", "PTN", "IGF1", "APOD", "COL1A2", "FBLN1", "MEG3", "CXCL12")
-  ),
-  "Dendritic" = list(
-    "PDC" = c("IRF7", "IRF4", "LILRA4", "PPP1R14B", "SOX4", "TSPAN13", "KIAA0226", "PTCRA", "RAB11FIP1", "CXCR3", "IL3RA"),
-    "mDC" = c("CD1C", "PKIB", "INSIG1", "CLEC10A", "C15orf48", "PPA1")
-  ),
-  "B" = list(
-    "B cells" = c("MS4A1", "CD79B", "BTG1", "VPREB3", "BANK1", "CD79A", "IGLL5"),
-    "Plasma cells" = c("SEC11C", "XBP1", "PRDX4", "SPCS2", "SSR3", "SDF2L1", "C19orf10", "MANF", "TMEM258", "DNAJB9")
-  ),
-  "Monocyte lineage" = list(
-    "Macrophage" = c("C1QA", "C1QC", "C1QB", "GPR34", "CSF1R", "MS4A4A"),
-    "Monocytes" = c("S100A9", "FCN1", "S100A8", "CSTA", "EREG", "NEAT1", "TKT", "THBS1", "VCAN", "TSPO", "LYZ")
-  ),
-  "NK" = list(
-    "NK" = c("NKG7", "GNLY", "KLRD1", "KLRB1", "FGFBP2", "PRF1"),
-    "CD56bright NK" = c("KLRC1", "CD44", "COTL1", "XCL1", "XCL2", "TBX21", "EOMES"),
-    "CD56dim NK" = c("GZMB", "FGFBP2", "PRF1", "FCGR3A", "TBX21")
-  ),
-  "CD8" = list(
-    "CD8" = c("CD8A", "CD8B", "GZMH", "GZMA", "PTPRC", "IFNG", "GZMK"),
-    "NKT" = c("CD44", "CD8A", "CD3D", "NKG7")
-  ),
-  "CD4" = list(
-    "Naive Th" = c("CCR7", "SELL"),
-    "Th1" = c("CD4", "IL2", "TNF"),
-    "Treg" = c("TIGIT", "CTLA4", "SOD1", "TNFRSF4", "TNFRSF18", "RTKN2", "FOXP3"),
-    "Th17" = c("IL17A", "IL17F", "RORC", "CD4", "CCL20", "CCR6", "RORA")
-  ),
-  "Epithelial" = list(
-    "Epithelial Club" = c("SCGB1A3", "WFDC2", "LCN2", "MMP7", "KRT4", "TACSTD2", "SCGB3A1"),
-    "Epithelial Hillock" = c("KRT13", "S100A16", "S100A14", "KRT19"),
-    "Epithelial Basal" = c("TP63", "KRT14", "KRT5"),
-    "Epithelial Luminal" = c("KLK4", "KLK3", "KLK2", "ACPP", "AR")
-  ),
-  "Tumor" = list(
-    "Tumor" = c("AMACR", "CACNA1D", "PCA3", "ERG", "FABP5", "COL9A2", "GCNT1", "PHGR1")
-  )
-)
-
-
-}
-
-library(viridis)
-library(cowplot)
-
-markers_df <- do.call(rbind, lapply(names(grouped_celltype_markers), function(group) {
-  sublist <- grouped_celltype_markers[[group]]
-  genes <- unique(unlist(sublist))
-  data.frame(Symbol = genes, GroupType = group, stringsAsFactors = FALSE)
-}))
-
-valid_markers_df <- markers_df[markers_df$Symbol %in% rownames(seurat_obj@assays$RNA$counts), ]
-valid_markers_df <- valid_markers_df[order(valid_markers_df$GroupType), ]
-gene_list <- split(valid_markers_df$Symbol, valid_markers_df$GroupType)
-valid_markers <- unlist(gene_list)
-names(valid_markers) <- rep(names(gene_list), lengths(gene_list))
-valid_markers <- valid_markers[!duplicated(valid_markers)]
-plot2 <- DotPlot(seurat_obj,
-                 features = valid_markers, group.by = "Cell_type2",
-                 assay = "RNA",
-                 dot.scale = 1,
-                 cluster.idents = FALSE) +
-  scale_size(range = c(0, 5)) +
-  scale_size_area(max_size = 10) +
-  cowplot::theme_cowplot() +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-        legend.text = element_text(size = 8),
-        legend.title = element_text(size = 9)) +
-  scale_color_gradientn(colours = c("lightblue", "blue", "darkblue"),
-                        limits = c(0, 1),
-                        oob = scales::squish,
-                        name = 'log2 (count + 1)')
-
-plot2
-
+plot4
 
 
 # Now plot expression of DHODH gene in all cell clusters 
@@ -380,7 +259,7 @@ dhodh_filtered <- dhodh_filtered %>%
   left_join(cell_counts, by = "Cell_type2") %>%
   mutate(Cell_type2_label = paste0(Cell_type2, "\n(n=", CellCount, ")"))
 
-p2 <- ggplot(dhodh_filtered, aes(x = Cell_type2, y = DHODH_expression, fill = Cell_type2)) +
+plot5 <- ggplot(dhodh_filtered, aes(x = Cell_type2, y = DHODH_expression, fill = Cell_type2)) +
   geom_violin(trim = FALSE) +
   geom_jitter(width = 0.2, size = 0.5, alpha = 0.5) +
   stat_compare_means(comparisons = comparisons,
@@ -397,11 +276,11 @@ p2 <- ggplot(dhodh_filtered, aes(x = Cell_type2, y = DHODH_expression, fill = Ce
   ylab("DHODH Expression (log-normalized)") +
   ggtitle("GSE141445")
 
-p2
+plot5
 
 (OR) 
 
-p2 <- ggplot(dhodh_filtered, aes(x = Cell_type2, y = DHODH_expression, fill = Cell_type2)) +
+plot5 <- ggplot(dhodh_filtered, aes(x = Cell_type2, y = DHODH_expression, fill = Cell_type2)) +
   geom_violin(trim = FALSE) +
   geom_jitter(width = 0.2, size = 0.5, alpha = 0.5) +
   stat_compare_means(comparisons = comparisons, method = "wilcox.test", label = "p", hide.ns = TRUE) +
@@ -419,7 +298,7 @@ p2 <- ggplot(dhodh_filtered, aes(x = Cell_type2, y = DHODH_expression, fill = Ce
     plot.title.position = "plot"
   )
 
-print(p2)
+plot1
 
 myout<-"GSE141445_final.rds"
 saveRDS(seurat_obj, myout)
